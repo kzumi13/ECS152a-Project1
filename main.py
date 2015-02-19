@@ -72,8 +72,9 @@ def main():
             #if fifoQ.qsize() == 0:
                 #1,2)get the service time of the packet. Create a departure event with time = curtime+transtime
                 length = length + 1 #add packet to the queue
+                fifoQ.put(service_t) #add service time to queue
                 dep_time = cur_time + service_t
-                #3)insert the event into the GEL
+                #3)insert the departure event into the GEL
                 new_devent = Event(dep_time, 1, 0) 
                 gel.append(new_devent)
                 gel.sort(key=lambda x: x.time) #sort based on the event time
@@ -82,6 +83,7 @@ def main():
             #)b there is something in the queue
             elif length-1 < MAXBUFFER:
                 lenght = length + 1
+                fifoQ.put(service_t) #add service time to queue
             #Queue is full and will drop the packet
             else:
                 #drop the packet!!!!
@@ -92,7 +94,18 @@ def main():
         elif cur_event.type == 1:
             #set the curent time to the event time
             cur_time = cur_event.time
-
+            #UDATE THE SATISTICS!??! <-----------------------------------------------
+            length = length - 1
+            fifoQ.get()
+            #if the queue is empty DO NOTHING
+            #else, if there is something in the queue
+            if length > 0:
+                #create a departure event for time
+                service_t = fifoQ.get() #<-------- we cannot use a queue since we only what to look at it, and not pop it off
+                new_devent = Event(cur_time + service_t, 1, service_t)
+                #insert event into GEL
+                gel.append(new_devent)
+                gel.sort(key=lambda x: x.time) #sort based on the event time
 #ENDOF 3.4
 
     #END FOR
