@@ -24,7 +24,9 @@ def main():
 #3.2 INITIALIZATION
     cur_time = 0 #the current time
     MAXBUFFER = 10  #MAXBUFFER is abitrary.... apparently
+    #TODO: DO WE EVEN USE THE QUEUE?! IF SO WHAT WILL IT HOLD <-----------------------------------
     fifoQ = queue.Queue(maxsize= MAXBUFFER) #initialize the queue
+    length = 0 #queue length
      
     
     #initialize the GEL
@@ -37,39 +39,71 @@ def main():
     init_event = Event(cur_time + nedTime(a_rate),0,nedTime(d_rate)) #first event = arrival
     gel.append(init_event)
 #ENDOF 3.2
-    
+
+#3.5 UTILIZATION <---------------------------------------NOT DONE AT ALL!
+    util = 0 #utilization
+    mql = 0 #mean queue length
+    npd = 0 #number of packets dropped
+#ENDOF 3.5
+   #Begin FOR
     for i in range(0, 10):
         #get the first event from the GEL
-        cur_event = gel[0]
+        gel.reverse()
+        cur_event = gel.pop()
+        gel.reverse()
 
 #3.3    PROCESS THE ARRIVAL EVENT
         if cur_event.type == 0:
         #set the event time to the current event time
-            cur_event.time = cur_time
-            
+            cur_time = cur_event.time
             #1)generate the next arrival event
             ar_time = cur_time + nedTime(a_rate)
-            #2)create a new packet with serivce <--------------------------- THIS ONE STILL NEEDS WORK!?!?!? I DONT UNDERSTAND!!!!
+            #2)TODO create a new packet with serivce <--------------------------- THIS ONE STILL NEEDS WORK!?!?!? I DONT UNDERSTAND!!!!
             service_t = nedTime(d_rate)
             #3)create a new arrival event
-            new_event = Event(ar_time, 0, service_t)
+            new_aevent = Event(ar_time, 0, service_t)
             #4)Insert the event into the list
-            gel.append(new_event)
-            gel.sort(key=lambda x: x.event_time) #sort based on the event time
+            gel.append(new_aevent)
+            gel.sort(key=lambda x: x.time) #sort based on the event time
 
         #process the arrival event
             #a)if server is free, schedule for transmission
-            if fifoQ.qsize() == 0:
-                
+            if length == 0:
+            #if fifoQ.qsize() == 0:
+                #1,2)get the service time of the packet. Create a departure event with time = curtime+transtime
+                length = length + 1 #add packet to the queue
+                dep_time = cur_time + service_t
+                #3)insert the event into the GEL
+                new_devent = Event(dep_time, 1, 0) 
+                gel.append(new_devent)
+                gel.sort(key=lambda x: x.time) #sort based on the event time
+                #UPDATE STATISTICS <---------------------------------------------------------
+
+            #)b there is something in the queue
+            elif length-1 < MAXBUFFER:
+                lenght = length + 1
+            #Queue is full and will drop the packet
+            else:
+                #drop the packet!!!!
+                npd = npd + 1
 #ENDOF 3.3
-                
+
+#3.4    PROCESS THE DEPARTURE EVENT
+        elif cur_event.type == 1:
+            #set the curent time to the event time
+            cur_time = cur_event.time
+
+#ENDOF 3.4
+
+    #END FOR
+    
     #output statistics
     #if fifoQ.empty() == False:
     #    print(fifoQ.get())
     #print(gel)
 
     for events in gel:
-        print(events.service_t)
+        print(events.time,  events.service_t)
     
     mylist = [0,1,2,3,4,5]
     print(mylist[1]);
