@@ -7,8 +7,6 @@ def nedTime(rate):
     u = random.random()
     return ((-1/rate) * math.log(1-u))
 #ENDOF 3.6
-
-
     
 class Event():
     #event time
@@ -155,22 +153,21 @@ def main():
         u_list.append(util)
         mql_list.append(mql)
         npd_list.append(npd)
-    print(u_list)
     u_list = []
     mql_list = []
     npd_list = []
     
     #3)
-    #print("Part 3")
-    #for i in [1, 20, 50]:
-    #    for j in [.2,.4,.6,.8,.9]: 
-    #        util, mql, npd = do_everything(j, 1, i)
-    #        u_list.append(util)
-    #        mql_list.append(mql)
-    #        npd_list.append(npd)
-    #    u_list = []
-    #    mql_list = []
-    #    npd_list = []
+    print("Part 3")
+    for i in [1, 20, 50]:
+        for j in [.2,.4,.6,.8,.9]: 
+            util, mql, npd = do_everything(j, 1, i)
+            u_list.append(util)
+            mql_list.append(mql)
+            npd_list.append(npd)
+        u_list = []
+        mql_list = []
+        npd_list = []
 
     
     
