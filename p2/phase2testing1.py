@@ -2,84 +2,146 @@ import random
 import queue
 import math
 
-class Event():
-    #event time
-    #type
-    #next event
-    #prev event
-    def __init__(self, event_time, event_type, service_t): #event_n_event, event_p_event):
-        self.time = event_time
-        self.type = event_type #0 indicates arrival, 1 indicates departure
-        self.service_t = service_t #service time of the event
-        #self.n_event = event_n_event
-        #self.p_event = event_p_event
-        self.sender = NONE
-        self.receiver = NONE
+#Negatively distritibuted stuff...
+def nedTime(rate):
+    u = random.random()
+    return round(((-1/rate) * math.log(1-u)), 2)
 
+#generate the backoff time
+def backOff(T, n):
+    u = random.random()
+    return round(T * u, 2)
+
+#generate a negativley distributed random variable with average of 772 (1544/2)
+def genFrameLen():
+    while True:
+        u = random.expovariate(1/772)
+        if u < 1544:
+            return round(u)
+    
+#Event Class
+class Event():
+    def __init__(self, event_time, event_type, frame_len, b_count): #event_n_event, event_p_event):
+        self.time = event_time
+        self.type = event_type #0 indicates arrival, 1 departure
+        self.frame_len = frame_len #service time of the event
+        self.b_count = b_count # amount of times it has backed off
+
+#Host Class
 class Host():
-    def __init__(self, ID):
-        self.ID = ID
-        self.status = 0 # 0 = idle , 1 = sending
-        self.oldStatus = self.status # replicate the old status
-        self.buffer = []
-        self.count = -1
-        self.wait= -1
-        self.tries = 0
-        self.queueDelay = 0
-        self.transDelay = 0
-        
-def main():
-    throughput = 0
+    def __init__(self):
+        self.gel = []
+        self.b_time = 0
+        #b_count = 0 #amount of times we have backed off
+
+#def genTransEvent(cur_time, lambda):
+
+#proccess the hosts list events
+# def procHostEvent(hosts, cur_time, busy_time):
+#     #find host with most current event
+#     hosts.sort(key = lambda x: x.gel[0].event_time)
+#     #if (cur_time > busy_time)
+#     if cur_time > busy_time:        
+#         #begin transmission
+#         #pop Event of GEL
+#         event = hosts[0].gel.pop(0)
+        #set cur_time & busy_time
+
+    #else
+        #update backoff and attempt to transmit later
+
+
+def do_everything(lam, n_hosts, T):
+    #throughput analysis
+    total_bytes = 0
+    total_time = 0
+
+    #network Delay
+    total_frames = 0
+    total_delays = 0
+    
     totalDelay = 0
     averageDelay = 0
-    hostCount = 10  # part a N = 10
-    a_rate = 0.1
-    backoffT = 0.5
-    totalTransmitted = 0
-    hostBuffer = []  # will be use to store all 10 hosts
-    cur_time = 0
-    gel = []
- 
-    fifoQ = [] # buffer that have hosts for transmit
-    busyFlag = 0
+
+    t = T #<-----------------------------------------------VARAIBLE
     
+    hostCount = n_hosts  #<--------------------------------VARIABLE
+    a_rate = lam #<-----------------------------------------VARAIBLE
+    totalTransmitted = 0
+
+    hostBuffer = []  # will be use to store all 10 hosts
+    cur_time = 0 #UNITS ms
+    busy_time = 0 #UNITS ms
+
     length = 0 #queue length
      
-    SIFS =   0.00005       #0.05 msec 
-    DIFS =   0.0001       #0.1 msec
+    SIFS =   0.05       #0.05 msec 
+    DIFS =   0.1       #0.1 msec
     SENSE =  0.00001       #0.01 msec
     FRAMESIZE = 64
     CHANNELCAP = 11   #channel transtmission
-    MAXFRAMELENGTH = 1554  # data frame length
-    
+    MAXFRAMELENGTH = 1544  # data frame length
+
     #create each host using for loop
     for i in range(hostCount):  # we making 10 hosts first part
-        hostBuffer.append(hostBuffer[i])  # and we stored it inside the hostBuffer, which contains all 10 hosts
+        new_host = Host()
+        hostBuffer.append(new_host)  # and we stored it inside the hostBuffer, which contains all 10 hosts
 
     #create initial arrival event   
-    init_event = Event(cur_time + nedTime(a_rate),0,nedTime(d_rate)) #first event = arrival = 0; departure = 1
-    init_event.receiver = random.randint(0, hostCount -1)
-    init_event.sender = random.randint(0, hostCount -1)
-    gel.append(init_event)
-    gel.sort(key=lambda x: x.time)
+    for host in hostBuffer:
+        new_event = Event(nedTime(a_rate), 0 , genFrameLen(), 0)
+        host.gel.append(new_event)
+        #print(new_event.time)
 
-    #check
-    while cur_time < 10000:
-        cur_time = cur_time + 1
-        for i in hostBuffer:
-            if not busyFlag:  # so assume busyFlag is not equal to 0
-                if host.counter == 0 and len(host.buffer) > 0:  # if the counter is 0 and buffer contains some files
-                    fifoQ.append(host)
-                    host.counter = -1 # reset it
-                elif host.count > 0:
-                    host.count = host.counter - 1 # keep decreasing till it reaches 0 so you can transmit files
-            else:
-                if host.wait > 0:
-                    host.wait = host.wait - 1
-                elif host.wait == 0:
-                    fifoQ.append(host)
-                    host.wait = -1
-                
+    #DO THE SHIT -----------------------------------------------------*****
+    for i in range(10000):
+        #print(len(hostBuffer))
+        #print(len(hostBuffer[0].gel))
+        hostBuffer.sort(key = lambda x: x.gel[0].time)
+        idle = cur_time >= busy_time
+        #get our first event
+        cur_event = hostBuffer[0].gel.pop(0)
+        f_len = cur_event.frame_len
+        b_count = cur_event.b_count
 
-                    
-                
+        #set the current time
+        cur_time = cur_event.time
+        
+        #Process the event!!! -----------------------------------------------
+        #WAIT FOR DIFS
+        if cur_event.type == 0:
+            if idle: #wait for 
+                new_event = Event(cur_time + DIFS, 1, f_len, b_count)
+            else: #backoff
+                new_event = Event(cur_time + backOff(t, b_count), 0, f_len, b_count+1)
+            #insert back into hostBuffer
+            hostBuffer[0].gel.append(new_event)  
+
+        #BEGIN TANSMISSION
+        elif cur_event.type == 1:
+            if idle: #transmit  #transmission delay             #SSIFS
+                total_bytes = f_len + total_bytes + 64 #update total_bytes
+                total_frames = total_frames + 1
+                #print(cur_time)
+                #print(b_count)
+                trans_time = round((f_len*8)/(11 * 10**6), 2) + SIFS + round((FRAMESIZE*8)/(11 * 10**6), 2)
+                #we are now transmitting -> set busy until we finish
+                busy_time = cur_time + trans_time
+                #create a new event
+                new_event = Event(cur_time + nedTime(a_rate), 0, genFrameLen(), b_count)
+            else: #backoff
+                new_event = Event(cur_time + backOff(t, b_count), 0, f_len, b_count+1)
+            hostBuffer[0].gel.append(new_event)
+
+    total_time = cur_time
+    print("analysis Stuff")
+    print(total_bytes)
+    print(total_time)
+    print(total_bytes/total_time)
+    print(total_frames)
+    
+def main():
+    do_everything(.1, 10, 10)
+    do_everything(.9, 10, 10)
+
+main()               
